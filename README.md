@@ -59,7 +59,7 @@ Git履歴から確認できる担当範囲は次のとおりです。
 
 - 認証エラーを画面へ返す処理と、Password表示切替の改善
 - 同行のお誘いを検証するDemo FlowとTest Accountの整備
-- Demo専用の自動承諾処理を環境変数で制御し、本番動作と分離
+- Prototype での動作確認用に自動承諾フローを実装
 - Production環境変数・Deployment設定の調整
 - GitHubのBranchとCommitを用いたチーム開発
 
@@ -99,19 +99,19 @@ MVPではAI推薦を採用せず、活動・曜日・時間・距離を使った
 
 ### ローカルでの起動
 
-Node.js 24、npm、Docker Desktop、Google Maps API Keyが必要です。
+Node.js 24、npm、Docker が必要です。地図・施設検索を利用する場合は Google Maps API キーも設定してください。
 
-```powershell
-git clone https://github.com/DavidOng122/tomoni-app.git
-cd tomoni-app
-npm install
-Copy-Item .env.example .env.local
+```bash
+git clone https://github.com/jingxiangong/yorimi.git
+cd yorimi
+npm ci
+cp .env.example .env.local
 npx supabase start
-npx supabase db reset
-npm run dev
 ```
 
-詳しい設計資料は [`docs/`](./docs/) にあります。主要な確認コマンドは `npm run typecheck`、`npm run lint`、`npm run build`、`npm test` です。
+`supabase start` の API URL と Publishable Key を `.env.local` の `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` に設定し、`npm run dev` で起動します。ブラウザーで `http://localhost:3000/welcome` を開きます。確認メールは Supabase のローカルメール受信箱で確認できます。
+
+主要な確認コマンドは `npm run typecheck`、`npm run lint`、`npm run build`、`npm test` です。データベースを使うテストは [テスト手順](./docs/TESTING.md)、公開運用は [デプロイ手順](./docs/DEPLOYMENT.md) を参照してください。
 
 ---
 
@@ -168,7 +168,7 @@ The following responsibilities are verifiable from the repository’s Git histor
 
 - Improved authentication error delivery and the password-visibility interaction
 - Prepared demo workflow accounts and a flow for testing companion invitations
-- Isolated demo-only invitation auto-accept behavior behind environment configuration
+- Built a prototype auto-accept flow for demonstrations
 - Adjusted production environment and deployment configuration
 - Collaborated through GitHub branches and focused commits
 
@@ -206,16 +206,18 @@ Edogawa CSV files and official event pages pass through fetch, parse, normalize,
 
 ### Local Development
 
-Node.js 24, npm, Docker Desktop, and a Google Maps API key are required.
+Install Node.js 24, npm, and Docker. A Google Maps API key is needed for map and place-search features.
 
-```powershell
-git clone https://github.com/DavidOng122/tomoni-app.git
-cd tomoni-app
-npm install
-Copy-Item .env.example .env.local
+```bash
+git clone https://github.com/jingxiangong/yorimi.git
+cd yorimi
+npm ci
+cp .env.example .env.local
 npx supabase start
-npx supabase db reset
-npm run dev
 ```
 
-More detailed design documentation is available under [`docs/`](./docs/). The primary verification commands are `npm run typecheck`, `npm run lint`, `npm run build`, and `npm test`.
+Copy the API URL and publishable key shown by Supabase into `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`. On PowerShell, use `Copy-Item .env.example .env.local` for the copy step. Then run `npm run dev` and open `http://localhost:3000/welcome`. Check the local Supabase mail inbox for signup confirmation emails.
+
+A new local Supabase instance applies migrations and loads demo seed data. On an existing stack, apply new migrations with `npx supabase migration up --local`. Configure a restricted `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` to enable map search and location selection.
+
+Run `npm run typecheck`, `npm run lint`, `npm run build`, and `npm test` for the standard checks. See the [test instructions](./docs/TESTING.md) for live database tests and the [deployment guide](./docs/DEPLOYMENT.md) for a hosted instance.

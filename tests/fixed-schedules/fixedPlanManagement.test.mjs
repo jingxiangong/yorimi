@@ -10,8 +10,8 @@ const acceptedCancellationMigration = await readFile(
   new URL('../../supabase/migrations/20260822100000_cancel_accepted_fixed_plan.sql', import.meta.url),
   'utf8',
 );
-const demoAutoAcceptMigration = await readFile(
-  new URL('../../supabase/migrations/20260823000000_demo_auto_accept_fixed_schedule_invitations.sql', import.meta.url),
+const removeDemoAutoAcceptMigration = await readFile(
+  new URL('../../supabase/migrations/20261121000000_remove_demo_invitation_auto_accept.sql', import.meta.url),
   'utf8',
 );
 const myPageView = await readFile(
@@ -70,20 +70,11 @@ test('allows either participant to cancel accepted plans while preserving pendin
   assert.match(acceptedCancellationMigration, /invitation_type = 'fixed_plan'/i);
 });
 
-test('demo auto-accept waits ten seconds and preserves the fixed-plan acceptance state machine', () => {
-  assert.match(demoAutoAcceptMigration, /complete_fixed_schedule_invitation_acceptance/i);
-  assert.match(demoAutoAcceptMigration, /v_invitation\.sender_user_id <> v_sender_id/i);
-  assert.match(demoAutoAcceptMigration, /v_invitation\.invitation_type <> 'fixed_plan'/i);
-  assert.match(demoAutoAcceptMigration, /v_invitation\.created_at > now\(\) - interval '10 seconds'/i);
-  assert.match(demoAutoAcceptMigration, /public\.sync_connection_state/i);
-  assert.match(demoAutoAcceptMigration, /grant execute on function public\.auto_accept_fixed_schedule_invitation_for_demo\(uuid\)\s+to authenticated, service_role/i);
-});
-
-test('the fixed-plan invite screen schedules the demo auto-accept and refreshes the accepted chat state', () => {
-  assert.match(scheduledPeopleView, /NEXT_PUBLIC_DEMO_AUTO_ACCEPT_FIXED_SCHEDULE_INVITATIONS === 'true'/);
-  assert.match(scheduledPeopleView, /\? 10_000/);
-  assert.match(scheduledPeopleView, /DEMO_AUTO_ACCEPT_DELAY_MS !== null/);
-  assert.match(scheduledPeopleView, /window\.setTimeout\(async \(\) =>/);
-  assert.match(scheduledPeopleView, /autoAcceptFixedScheduleInvitationForDemo\(invitationId\)/);
-  assert.match(scheduledPeopleView, /router\.refresh\(\)/);
+test('fixed-plan invitations leave acceptance to the recipient', () => {
+  assert.match(
+    removeDemoAutoAcceptMigration,
+    /drop function if exists public\.auto_accept_fixed_schedule_invitation_for_demo\(uuid\)/i,
+  );
+  assert.match(scheduledPeopleView, /router\.push\(`\/chat\/\$\{result\.conversationId\}\`\)/);
+  assert.doesNotMatch(scheduledPeopleView, /autoAcceptFixedScheduleInvitationForDemo|DEMO_AUTO_ACCEPT/);
 });

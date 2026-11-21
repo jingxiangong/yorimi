@@ -8,5 +8,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 tsconfig.tsbuildinfo
+next-env.d.ts
 scratch/
-handoff/verification/*.tmp
+handoff/

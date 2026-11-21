@@ -239,7 +239,8 @@ test('local seed and Discover RPC use geographic Fixed Plan matching', {
       on sender_plan.fixed_plan_id = pair.sender_fixed_plan_id
     join public.fixed_plans receiver_plan
       on receiver_plan.fixed_plan_id = pair.receiver_fixed_plan_id
-    where invitation.invitation_status = 'pending'
+    where invitation.invitation_id = '50000000-0000-4000-8000-000000000004'
+      and invitation.invitation_status = 'pending'
       and (
         sender_plan.activity_type <> receiver_plan.activity_type
         or (

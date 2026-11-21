@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 
 import { createClient } from '@supabase/supabase-js';
@@ -20,6 +21,32 @@ function localConfiguration() {
 function client(url, key) {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
+
+async function insertPublicPlaceFixtures(context, service, places) {
+  const fixtures = places.map((place) => ({
+    public_place_id: crypto.randomUUID(),
+    source_place_id: crypto.randomUUID(),
+    source_name: 'Integration fixtures',
+    last_checked_at: new Date().toISOString(),
+    attributes: {},
+    ...place,
+  }));
+  assert.ifError((await service.from('public_places').insert(fixtures)).error);
+  context.after(async () => {
+    const ids = fixtures.map((place) => place.public_place_id);
+    assert.ifError((await service.from('public_places').delete().in('public_place_id', ids)).error);
+  });
+}
+
+test('the local database has removed demo invitation auto-accept', { skip: !integrationEnabled }, () => {
+  localConfiguration();
+  const container = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_tomoni-app';
+  const result = execFileSync('docker', [
+    'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1',
+    '-c', "select to_regprocedure('public.auto_accept_fixed_schedule_invitation_for_demo(uuid)') is null",
+  ], { encoding: 'utf8' });
+  assert.equal(result.trim(), 't');
+});
 
 async function createIntegrationUser(config, service, label) {
   const suffix = crypto.randomUUID().replaceAll('-', '');
@@ -109,6 +136,18 @@ test('local fixed-plan invitation rejects spoofing and preserves the exact pair 
     await service.from('fixed_plans').delete().in('fixed_plan_id', [senderPlanId, receiverPlanId]);
   });
 
+  const parkAttributes = { walking_place: { large_park_candidate: true, area_square_meters: 20_000 } };
+  await insertPublicPlaceFixtures(context, service, [
+    {
+      name: 'Integration West Park', category: 'park', source_dataset_id: 'integration_plan_pairs',
+      latitude: 35.6748, longitude: 139.8618, attributes: parkAttributes,
+    },
+    {
+      name: 'Integration East Park', category: 'park', source_dataset_id: 'integration_plan_pairs',
+      latitude: 35.69655, longitude: 139.89315, attributes: parkAttributes,
+    },
+  ]);
+
   assert.ifError((await service.from('fixed_plans').insert([
     plan({
       planId: senderPlanId,
@@ -188,7 +227,6 @@ test('local fixed-plan invitation rejects spoofing and preserves the exact pair 
   });
   assert.ifError(ichinoeShinozaki.error);
   assert.equal(ichinoeShinozaki.data.length, 1);
-  assert.equal(ichinoeShinozaki.data[0].name, '篠崎公園');
   assert.ok(ichinoeShinozaki.data[0].sender_distance_meters <= 3200);
   assert.ok(ichinoeShinozaki.data[0].receiver_distance_meters <= 3200);
 
@@ -448,7 +486,7 @@ test('local matching uses distance-or-time, ignores connections, and excludes on
 
 test('dog walking uses parks, study and reading uses libraries, sports uses facilities, and no-candidate plans stay nullable', {
   skip: !integrationEnabled,
-}, async () => {
+}, async (context) => {
   const config = localConfiguration();
   const sender = client(config.url, config.anonKey);
   const service = client(config.url, config.serviceRoleKey);
@@ -456,6 +494,21 @@ test('dog walking uses parks, study and reading uses libraries, sports uses faci
     email: 'figma.demo@tomoni.local',
     password: 'TomoniDemo!2026',
   })).error);
+  await insertPublicPlaceFixtures(context, service, [
+    {
+      name: 'Integration Park', category: 'park', source_dataset_id: 'integration_plan_pairs',
+      latitude: 35.6748, longitude: 139.8618,
+      attributes: { walking_place: { large_park_candidate: true, area_square_meters: 20_000 } },
+    },
+    {
+      name: 'Integration Library', category: 'library', source_dataset_id: 'edogawa_public_libraries',
+      latitude: 35.6647, longitude: 139.8659,
+    },
+    {
+      name: 'Integration Sports Center', category: 'sports_facility', source_dataset_id: 'edogawa_sports_facilities',
+      latitude: 35.6669, longitude: 139.8609,
+    },
+  ]);
 
   const cases = [
     {

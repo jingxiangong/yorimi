@@ -109,7 +109,9 @@ test('local event recommendation prioritizes valid events, validates selection, 
         public_place_id: placeIds[1], source_dataset_id: 'integration_event_recommendations', source_place_id: `${suffix}-fallback-1`,
         source_name: '江戸川区', name: 'Integration文化施設A', category: 'cultural_facility',
         address: '江戸川区西葛西1丁目', latitude: 35.6650, longitude: 139.8650,
-        official_url: 'https://example.test/facility-a', attributes: {}, last_checked_at: new Date().toISOString(),
+        official_url: 'https://example.test/facility-a',
+        attributes: { cultural_facility: { facility_type: 'museum' } },
+        last_checked_at: new Date().toISOString(),
       },
       {
         public_place_id: placeIds[2], source_dataset_id: 'integration_event_recommendations', source_place_id: `${suffix}-fallback-2`,
@@ -164,7 +166,8 @@ test('local event recommendation prioritizes valid events, validates selection, 
         || recommendations.data[1].receiver_distance_meters > 5000,
       'Edogawa events must not be removed by the former 5km destination filter.',
     );
-    assert.ok(['event', 'cultural_facility'].includes(recommendations.data[2].recommendation_kind));
+    assert.equal(recommendations.data[2].recommendation_kind, 'cultural_facility');
+    assert.equal(recommendations.data[2].public_place_id, placeIds[1]);
 
     const spoofed = await sender.rpc('create_fixed_schedule_invitation', {
       p_fixed_plan_id: planIds[0], p_receiver_id: createdUserIds[1], p_receiver_fixed_plan_id: planIds[1],

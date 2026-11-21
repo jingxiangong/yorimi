@@ -758,10 +758,6 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: Json
       }
-      auto_accept_fixed_schedule_invitation_for_demo: {
-        Args: { p_invitation_id: string }
-        Returns: Json
-      }
       approve_event_participant: {
         Args: { p_participation_id: string }
         Returns: string

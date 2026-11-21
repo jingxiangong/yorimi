@@ -133,3 +133,17 @@ npm run build
 ```bash
 npm test
 ```
+
+### 本地 Supabase 集成测试
+
+`npm test` 会发现 `tests/` 下的所有 `*.test.mjs`。连接数据库的测试默认跳过。
+
+1. 启动本地 Supabase，并运行 `npx supabase migration up --local`。
+2. 从 `npx supabase status -o env` 获取本地值，将 `ANON_KEY`、`SERVICE_ROLE_KEY` 和 `JWT_SECRET` 分别写入被 Git 忽略的 `.env.local` 中的 `SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` 和 `SUPABASE_JWT_SECRET`。填写 `NEXT_PUBLIC_SUPABASE_URL` 或 `SUPABASE_URL` 为本地 API 地址。
+3. 运行 `npm run test:integration`。测试会串行执行并写入测试数据。使用按 README 初始化的可丢弃本地数据库，部分场景依赖默认种子账号。
+
+集成测试会检查邀请、连接、事件、推荐以及 PostGIS 等数据库行为。构建完成后，可在浏览器从 `/welcome` 验证邮件登录，检查新用户进入 Onboarding，并确认接收方可以接受邀请。
+
+### 浏览器验证
+
+启动本地应用和 Supabase，设置本地 `SUPABASE_SERVICE_ROLE_KEY`，然后运行 `npm run test:browser`。脚本验证邮件密码登录、Onboarding、头像上传和首页跳转。它需要 Puppeteer 管理的 Chrome（`npx puppeteer browsers install chrome`），或用 `PUPPETEER_EXECUTABLE_PATH` 指定兼容的 Chromium。应用端口不为 3000 时，可用 `YORIMI_APP_URL` 指定本地地址。
